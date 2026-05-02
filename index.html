@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Monitor</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-text">
+      <h1>Network Monitor</h1>
+    </div>
+  </div>
+  <div class="status-indicators">
+    <div class="status-badge">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">IDLE</span>
+    </div>
+    <div class="status-badge">
+      <span class="packet-counter" id="headerCount">PKTS: 0</span>
+    </div>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Dark/Light Theme">
+      <svg id="themeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Moon icon (shown in light mode) -->
+        <path class="moon" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        <!-- Sun icon (shown in dark mode) -->
+        <circle class="sun" cx="12" cy="12" r="5" style="display:none"></circle>
+        <line class="sun" x1="12" y1="1" x2="12" y2="3" style="display:none"></line>
+        <line class="sun" x1="12" y1="21" x2="12" y2="23" style="display:none"></line>
+        <line class="sun" x1="4.22" y1="4.22" x2="5.64" y2="5.64" style="display:none"></line>
+        <line class="sun" x1="18.36" y1="18.36" x2="19.78" y2="19.78" style="display:none"></line>
+        <line class="sun" x1="1" y1="12" x2="3" y2="12" style="display:none"></line>
+        <line class="sun" x1="21" y1="12" x2="23" y2="12" style="display:none"></line>
+        <line class="sun" x1="4.22" y1="19.78" x2="5.64" y2="18.36" style="display:none"></line>
+        <line class="sun" x1="18.36" y1="5.64" x2="19.78" y2="4.22" style="display:none"></line>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<div id="notification"></div>
+
+<div class="app-container">
+
+  <!-- Top Row - 3 Panels -->
+  <div class="top-panels">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="icon">▶</span>
+        <h3>Capture Control</h3>
+      </div>
+      <div class="panel-body">
+        <div class="form-group">
+          <label>Network Interface</label>
+          <select id="deviceSelect">
+            <option value="">Loading interfaces...</option>
+          </select>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" id="btnStart" onclick="startCapture()">
+            <span>▶</span> Start Monitoring
+          </button>
+          <button class="btn btn-danger" id="btnStop" onclick="stopCapture()" disabled>
+            <span>■</span> Stop Monitoring
+          </button>
+          <button class="btn btn-accent" onclick="exportCSV()">
+            <span>⬇</span> Export CSV
+          </button>
+        </div>
+        <div class="file-upload">
+          <label>Import CSV</label>
+          <input type="file" id="csvUpload" accept=".csv" onchange="handleCSVUpload(event)">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="icon">⊞</span>
+        <h3>Filters</h3>
+      </div>
+      <div class="panel-body">
+        <div class="form-group">
+          <label>Protocol</label>
+          <select id="filterProto">
+            <option value="ALL">All Protocols</option>
+            <option value="TCP">TCP</option>
+            <option value="UDP">UDP</option>
+            <option value="ICMP">ICMP</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Source IP</label>
+          <input type="text" id="filterSrc" placeholder="e.g. 192.168.1">
+        </div>
+        <div class="form-group">
+          <label>Destination IP</label>
+          <input type="text" id="filterDst" placeholder="e.g. 8.8.8.8">
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-accent" onclick="applyFilter()">
+            <span>⊞</span> Apply Filter
+          </button>
+          <button class="btn btn-secondary" onclick="resetFilter()">
+            <span>✕</span> Reset Filter
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="icon">◈</span>
+        <h3>Statistics</h3>
+      </div>
+      <div class="panel-body">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">Total Packets</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statAvg">0 B</div>
+            <div class="stat-label">Avg Size</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statBytes">0</div>
+            <div class="stat-label">Total KB</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statRate">0</div>
+            <div class="stat-label">Packets/sec</div>
+          </div>
+        </div>
+        <div class="proto-chart" id="protoBars">
+          <div class="proto-item">
+            <span class="proto-label">TCP</span>
+            <div class="proto-bar-container">
+              <div class="proto-bar tcp" id="barTCP" style="width:0%"></div>
+            </div>
+            <span class="proto-count" id="cntTCP">0</span>
+          </div>
+          <div class="proto-item">
+            <span class="proto-label">UDP</span>
+            <div class="proto-bar-container">
+              <div class="proto-bar udp" id="barUDP" style="width:0%"></div>
+            </div>
+            <span class="proto-count" id="cntUDP">0</span>
+          </div>
+          <div class="proto-item">
+            <span class="proto-label">ICMP</span>
+            <div class="proto-bar-container">
+              <div class="proto-bar icmp" id="barICMP" style="width:0%"></div>
+            </div>
+            <span class="proto-count" id="cntICMP">0</span>
+          </div>
+          <div class="proto-item">
+            <span class="proto-label">OTHER</span>
+            <div class="proto-bar-container">
+              <div class="proto-bar other" id="barOTHER" style="width:0%"></div>
+            </div>
+            <span class="proto-count" id="cntOTHER">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Packet Table -->
+  <div class="panel table-panel">
+    <div class="panel-header">
+      <span class="icon">◆</span>
+      <h3>Packet Capture Table</h3>
+    </div>
+    <div class="table-container" id="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Time</th>
+            <th>Source IP</th>
+            <th>Src Port</th>
+            <th>Destination IP</th>
+            <th>Dst Port</th>
+            <th>Protocol</th>
+            <th>Size (B)</th>
+            <th>Service</th>
+          </tr>
+        </thead>
+        <tbody id="packetTable">
+          <tr>
+            <td colspan="9">
+              <div class="empty-state">
+                <span class="empty-state-icon">◉</span>
+                <span class="empty-state-text">Start monitoring to capture packets</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <span id="rowCount">0 packets displayed</span>
+      <span class="filter-indicator" id="filterInfo"></span>
+    </div>
+  </div>
+
+  <!-- System Log -->
+  <div class="panel log-panel">
+    <div class="panel-header">
+      <span class="icon">◉</span>
+      <h3>System Log</h3>
+    </div>
+    <div class="panel-body" style="padding:12px">
+      <div class="log-container" id="logArea">
+        <div class="log-entry">
+          <span class="log-time">[00:00:00]</span>
+          <span class="log-msg log-info">System initialized. Select an interface and click Start.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
