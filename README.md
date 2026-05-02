@@ -132,4 +132,4 @@ g++ -std=c++17 -o network_monitor.exe src/main.cpp \
 - The HTTP server is single-purpose and not suitable for production use.
 - Captured packet payload content is not inspected (headers only).
 
-## Build by Abdullah Sarwar - BCSF24A039 02/05/2026
+## Author: Abdullah Sarwar (BCSF24A039) - 02/05/2026
